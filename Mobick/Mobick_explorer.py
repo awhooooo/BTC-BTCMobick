@@ -6,6 +6,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 
+# http://blockchain2.mobick.info/api/docs
 api_calls = {"utxo-set": "/api/blockchain/utxo-set",
              "address": "/api/address/%s/?limit=%s&offset=%s&sort=%s",
              "mining": "/api/mining/next-block",
