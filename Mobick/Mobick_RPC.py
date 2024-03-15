@@ -65,53 +65,7 @@ class MobickRPCsocket:
     def disconnect(self) -> None:
         self.selector.unregister(self.socket)
         self.socket.close()
-
-    @DeprecationWarning
-    async def send_request1(self, method: str, params: Optional[Dict[str, Any]] = None):
-
-        request_data = {
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params if params is not None else [],
-            "id": next(self.counter)  # You can use a counter for generating unique request IDs
-        }
-        
-        request_str = json.dumps(request_data) + '\n'
-        self.socket.sendall(request_str.encode())
-        
-        response_bytes = b''
-
-        # self.socket.settimeout(0.2)  # Set a timeout
-        # while True:
-        #     try:
-        #         chunk = self.socket.recv(4096)    # Receive data in chunks of 4096 bytes
-        #         if not chunk:
-        #             break    # Break if no more data is received
-        #         response_bytes += chunk
-        #     except socket.timeout:
-        #         break    # Break if the socket times out
-
-        while True:
-            events = self.selector.select(timeout=0.2)  # Wait for data availability
-            if not events:
-                break  # Break if no events (timeout)
-            for key, mask in events:
-                if mask & selectors.EVENT_READ:
-                    chunk = key.fileobj.recv(2048)
-                    if not chunk:
-                        break  # Break if no more data is received
-                    response_bytes += chunk
-    
-        if response_bytes == b'':
-            return dict({})
-        else: 
-            response_data = json.loads(response_bytes.decode())
-            if response_data.get("error") is not None:
-                raise RPCError(id=response_data.get("id"), error=response_data.get("error"))
-            else:
-                # print(type(response_data["result"]))
-                return response_data["result"]
-            
+               
 
     async def send_request(self, method: str, params: Optional[Dict[str, Any]] = None) -> Any:
 
