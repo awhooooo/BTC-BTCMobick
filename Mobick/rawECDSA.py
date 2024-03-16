@@ -249,6 +249,9 @@ def der_to_rs(der_signature):
     s_len = der_bytes[2 + r_len + 1]
     s = int.from_bytes(der_bytes[2 + r_len + 2 :], byteorder='big')
 
+    # keep in mind that the s value above might not be the one you are looking for
+    # if not, then try the subtraction of s from the subgroup order of the curve
+    # which is curve.n - s in this case
     return r, s
 
 
