@@ -262,7 +262,7 @@ async def query_balances(addresses: List[str], rpc: MobickRPCsocket) -> Dict[str
 
 async def main():
 
-    rpc = MobickRPCsocket(host="13.55.48.220", port=40008)
+    rpc = MobickRPCsocket(host="13.55.48.220", port=40008) # or (host="220.85.71.15", port=40008)
     rpc.connect()
     print("connected")
     print(await rpc.block_header(height=1000, cp_height=0))
