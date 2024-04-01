@@ -1,5 +1,3 @@
-import sys
-sys.path.append("/Users/ieunmi/PycharmProjects/pythonProject")
 from Mobick.Mobick_RPC import *
 
 
@@ -27,7 +25,7 @@ async def main():
             break
     
     # print(len(data))
-    with open('/Users/ieunmi/Downloads/extraction.png', 'wb') as file:
+    with open('/Users/ME/Downloads/extraction.png', 'wb') as file:
         file.write(data)
         file.close()
 
