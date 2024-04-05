@@ -52,8 +52,8 @@ class BTCMobickExplorer:
 
         url = self.base_url + api_calls["address"] % (address, str(limit), str(offset), sort)
         result = self.request_and_jsonize(url)
-        balance = result.get('txHistory', {}).get('balanceSat', 0) / 10 ** 8
-        return balance
+        balance = result.get('txHistory', {}).get('balanceSat', 0) + result.get('txHistory', {}).get('unconfirmedBalanceSat', 0)
+        return balance / (10 ** 8)
     
 
     async def _get_balance_async(self, session, address):
