@@ -12,7 +12,11 @@ async def main():
     data = b''
     i = 53
     while i + script_bytes[i] <= len(script_bytes):
-        if script_bytes[i] == 76:
+        if script_bytes[i] >= 1 and script_bytes[i] <=75:
+            next_byte_length = script_bytes[i]
+            data += script_bytes[i+1:i+1+next_byte_length]
+            i += 1 + next_byte_length
+        elif script_bytes[i] == 76:
             next_byte_length = int.from_bytes(script_bytes[i+1], byteorder='little')
             data += script_bytes[i+2:i+2+next_byte_length]
             i += 2 + next_byte_length
