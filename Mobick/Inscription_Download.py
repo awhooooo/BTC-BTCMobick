@@ -29,7 +29,7 @@ async def main1():
             break
     
     # print(len(data))
-    with open('/Users/ME/Downloads/extraction.png', 'wb') as file:
+    with open('/Users/ME/Downloads/Homer_Simpson.png', 'wb') as file:
         file.write(data)
         file.close()
 
