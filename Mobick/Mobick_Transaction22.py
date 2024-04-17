@@ -20,7 +20,7 @@ from Mobick.Mobick_RPC import *
 
 
 setup(network="mainnet")
-priv1 = PrivateKey(wif='secret for obvious reason 1')
+priv1 = PrivateKey(wif='L2rBJ7KNsGtSfgyEGE3xoXQa4KNUoBB3FLRN4WbLawpRgqAHuVDA')
 pub1 = priv1.get_public_key()
 pubkeyHash = hashlib.new('ripemd160', hashlib.sha256(bytes.fromhex(pub1.to_hex())).digest()).hexdigest()
 
