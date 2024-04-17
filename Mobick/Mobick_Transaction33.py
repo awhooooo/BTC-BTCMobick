@@ -9,8 +9,6 @@ from Mobick.MRC_20 import *
 
 setup("mainnet")
 
-# priv1 = PrivateKey(wif="cNqMYW3WSkSTWJ8kZvWM7iBSurz1bTEP3odHQusKisRaQcuqiruh")
-# priv2 = PrivateKey(wif="cRohEDtVDbT1Gq38YSrtZ72msF5jS8yQSeaWsRadHc1svxzoTv87")
 priv1 = PrivateKey(wif="secret for obvious reason 1")
 priv2 = PrivateKey(wif="secret for obvious reason 2")
 priv3 = PrivateKey(wif="secret for obvious reason 3")
