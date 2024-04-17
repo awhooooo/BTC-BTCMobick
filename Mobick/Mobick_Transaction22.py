@@ -1,8 +1,6 @@
-import sys
-sys.path.append("/Users/ieunmi/PycharmProjects/pythonProject")
-import hashlib, socket, time
-import struct, base58
-import ecdsa, bech32
+import hashlib
+import struct
+import ecdsa
 import json, bitcoin, bitcoinlib
 from bitcoinlib.config.opcodes import *
 from bitcoinlib.keys import *
@@ -22,7 +20,7 @@ from Mobick.Mobick_RPC import *
 
 
 setup(network="mainnet")
-priv1 = PrivateKey(wif='L2rBJ7KNsGtSfgyEGE3xoXQa4KNUoBB3FLRN4WbLawpRgqAHuVDA')
+priv1 = PrivateKey(wif='secret for obvious reason 1')
 pub1 = priv1.get_public_key()
 pubkeyHash = hashlib.new('ripemd160', hashlib.sha256(bytes.fromhex(pub1.to_hex())).digest()).hexdigest()
 
