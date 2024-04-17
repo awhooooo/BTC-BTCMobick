@@ -3,7 +3,6 @@ import bitcoin
 import asyncio
 import json
 import struct
-sys.path.append("/Users/ieunmi/PycharmProjects/pythonProject")
 from bitcoinlib.keys import Address
 from bitcoinlib.transactions import *
 from Mobick.rawECDSA import *
