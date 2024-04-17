@@ -1,5 +1,3 @@
-import sys
-sys.path.append("/Users/ieunmi/PycharmProjects/pythonProject")
 from bitcoinutils.setup import setup
 from bitcoinutils.utils import *
 from bitcoinutils.script import Script
