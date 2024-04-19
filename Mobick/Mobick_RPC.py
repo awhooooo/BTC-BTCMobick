@@ -1,11 +1,14 @@
+import asyncio
+import json
+import logging
+from contextlib import asynccontextmanager
 import socket
 import json
 import sys
 import itertools
-import hashlib
-import asyncio
-import bitcoin
 import selectors
+import hashlib
+import bitcoin
 from bitcoinlib.keys import Address
 from typing import Union, List, Any, Dict, Optional
 from Bitcoin import bech32m_bip350
@@ -32,106 +35,91 @@ methods = ["blockchain.block.header",
            "server.ping",
            "server.version"]
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def _next_request_id_factory():
     return itertools.count(1)
 
-
 class RPCError(Exception):
-    """
-    Enrich the `Error` - https://www.jsonrpc.org/specification#error_object
-    with the `id` of the request that caused the error.
-    """
     def __init__(self, id: int, error: dict) -> None:
         super().__init__(error.get("message"))
         self.id = id
         self.error = error
 
-
 class MobickRPCsocket:
-
     def __init__(self, host: str, port: int) -> None:
         self.host = host
         self.port = port
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.counter = _next_request_id_factory()
         self.selector = selectors.DefaultSelector()
-        
-    def connect(self) -> None:
-        self.socket.connect((self.host, self.port))
-        self.socket.setblocking(False)  # Set to non-blocking mode
-        self.selector.register(self.socket, selectors.EVENT_READ)
+        self.reader, self.writer = None, None
 
-    def disconnect(self) -> None:
-        self.selector.unregister(self.socket)
-        self.socket.close()
-               
+    async def connect(self) -> None:
+        self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
 
-    async def send_request(self, method: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    async def disconnect(self) -> None:
+        if self.writer:
+            self.writer.close()
+            await self.writer.wait_closed()
 
+    @asynccontextmanager
+    async def manage_connection(self):
+        try:
+            await self.connect()
+            yield
+        finally:
+            await self.disconnect()
+
+    async def send_request(self, method: str, params: dict = None) -> dict:
         request_data = {
             "jsonrpc": "2.0",
             "method": method,
-            "params": params if params is not None else [],
+            "params": params if params else [],
             "id": next(self.counter)
         }
-
         request_str = json.dumps(request_data) + '\n'
+        self.writer.write(request_str.encode())
+        await self.writer.drain()
+        return await self.read_response(request_data["id"])
 
-        try:
-            self.socket.sendall(request_str.encode())
-        except OSError as e:
-            raise RPCError(id=request_data["id"], error={"message": f"Failed to send request: {e}"})
-
+    async def read_response(self, request_id: int) -> dict:
         response_bytes = b''
-        while not b'\n' in response_bytes:
-            try:
-                events = self.selector.select(timeout=1)  # Wait for data availability
-                if not events:
-                    break  # Break if no events (timeout)
-                for key, mask in events:
-                    if mask & selectors.EVENT_READ:
-                        chunk = key.fileobj.recv(2048)
-                        response_bytes += chunk
-                        if b'\n' in chunk:
-                            break  # Break out of the inner loop
-            except asyncio.TimeoutError:
-                raise RPCError(id=request_data["id"], error={"message": "Timed out waiting for response"})
-
-        if not response_bytes:
-            raise RPCError(id=request_data["id"], error={"message": "No response received"})
+        while True:
+            chunk = await self.reader.read(2048)
+            response_bytes += chunk
+            if b'\n' in chunk:
+                break
 
         try:
             response_data = json.loads(response_bytes.decode())
         except json.JSONDecodeError as e:
-            raise RPCError(id=request_data["id"], error={"message": f"Failed to parse JSON response: {e}"})
+            raise RPCError(request_id, {"message": f"Failed to parse JSON response: {e}"})
 
-        if response_data.get("error") is not None:
-                raise RPCError(id=response_data.get("id"), error=response_data.get("error"))
-        else:
-            return response_data["result"]
+        if "error" in response_data:
+            raise RPCError(response_data.get("id"), response_data.get("error"))
 
-
+        return response_data["result"]
+    
     def address_to_electrum_scripthash(self, address):
 
-        address1 = Address.parse(address)
+            address1 = Address.parse(address)
 
-        if address1.witness_type == 'segwit':
-            decode = bech32m_bip350.decode(addr=address, hrp='bc')
-            scriptPubKey= "00" + hex(len(decode[1]))[2:] + bytes(decode[1]).hex()
-            scripthash = hashlib.sha256(bytes.fromhex(scriptPubKey)).digest()[::-1].hex()
+            if address1.witness_type == 'segwit':
+                decode = bech32m_bip350.decode(addr=address, hrp='bc')
+                scriptPubKey= "00" + hex(len(decode[1]))[2:] + bytes(decode[1]).hex()
+                scripthash = hashlib.sha256(bytes.fromhex(scriptPubKey)).digest()[::-1].hex()
+                
+            elif address1.witness_type == 'taproot':
+                decode = bech32m_bip350.decode(addr=address, hrp='bc')
+                scriptPubKey= "5120" + bytes(decode[1]).hex()
+                scripthash = hashlib.sha256(bytes.fromhex(scriptPubKey)).digest()[::-1].hex()
+
+            else:
+                scriptPubKey = bitcoin.address_to_script(address)
+                scripthash = hashlib.sha256(bytes.fromhex(scriptPubKey)).digest()[::-1].hex()
             
-        elif address1.witness_type == 'taproot':
-            decode = bech32m_bip350.decode(addr=address, hrp='bc')
-            scriptPubKey= "5120" + bytes(decode[1]).hex()
-            scripthash = hashlib.sha256(bytes.fromhex(scriptPubKey)).digest()[::-1].hex()
-
-        else:
-            scriptPubKey = bitcoin.address_to_script(address)
-            scripthash = hashlib.sha256(bytes.fromhex(scriptPubKey)).digest()[::-1].hex()
-        
-        return scripthash
-
+            return scripthash
     
     async def block_header(self, height: int, cp_height: int = 0) -> str:
 
@@ -248,49 +236,38 @@ def deserialize_header(header: Union[str, bytes]) -> List[Dict]:
     return result
 
 
-async def query_balances(addresses: List[str], rpc: MobickRPCsocket) -> Dict[str, Dict]:
-    balances = {}
-    for address in addresses:
-        try:
-            balance = await rpc.get_balance(address)
-            balances[address] = balance["confirmed"] / (10 ** 8)
-        except RPCError as e:
-            print(f"Error querying balance for address {address}: {e}")
-            balances[address] = None
-    return balances
-
-
+# Example usage of RPC client
 async def main():
 
-    rpc = MobickRPCsocket(host="13.55.48.220", port=40008) # or (host="220.85.71.15", port=40008)
-    rpc.connect()
-    print("connected")
-    print(await rpc.block_header(height=1000, cp_height=0))
-    print(await rpc.block_headers(start_height=1000, count=10, cp_height=0))
-    print(await rpc.estimate_fee(number=6))
-    print(await rpc.headers_subscribe())
-    print(await rpc.get_balance('bc1q07alqsvf47x4jwmc7xd5me2rjqgc4jtsjlrpvc'))
-    print(await rpc.get_history('bc1qy9de0qt94562vutkfvvqsvupqljufd4h3u3zl9ljxlrn7y2damzqx792cw'))
-    print(await rpc.get_mempool('1377msqsMLd4WToHgbFCJHJh51woBG5TvF'))
-    print(await rpc.list_unspent('1377msqsMLd4WToHgbFCJHJh51woBG5TvF'))
-    print(await rpc.get_transaction(txid='e67a0550848b7932d7796aeea16ab0e48a5cfe81c4e8cca2c5b03e0416850114', verbose=True))
-    print(await rpc.get_merkel(txid='e67a0550848b7932d7796aeea16ab0e48a5cfe81c4e8cca2c5b03e0416850114', height=111194))
-    # print(await rpc.get_tsc_merkle(txid='6a9611ab2996acc61f9b0491ea1f57834ec244c3c5f7595728c06048aa937554',
-    #                    height=758152, txid_or_tx="txid", target_type="block_hash"))
-    print(await rpc.id_from_pos(height=758152, tx_pos=2, merkle=True))
-    print(await rpc.get_fee_histogram())
-    print(await rpc.server_banner())
-    print(await rpc.server_donation())
-    print(await rpc.server_features())
-    print(await rpc.server_peers_subscribe())
-    print(await rpc.server_ping())
-    print(await rpc.server_version(client_name="ElectrumX", protocol_version=["1.2", "1.8"]))
-    rpc.disconnect()
-    print("disconnected")
+    rpc = MobickRPCsocket(host="220.85.71.15", port=40008)
+    async with rpc.manage_connection():
+        try:
+            print(await rpc.block_header(height=1000, cp_height=0))
+            print(await rpc.block_headers(start_height=1000, count=10, cp_height=0))
+            print(await rpc.estimate_fee(number=6))
+            print(await rpc.headers_subscribe())
+            print(await rpc.get_balance('bc1qdapypxj43wm3c9z0ke8jewe8ygv9yueef0rk3lhwggw89pdznyyq745sl5'))
+            print(await rpc.get_history('bc1qdapypxj43wm3c9z0ke8jewe8ygv9yueef0rk3lhwggw89pdznyyq745sl5'))
+            print(await rpc.get_mempool('1377msqsMLd4WToHgbFCJHJh51woBG5TvF'))
+            print(await rpc.list_unspent('bc1pzhupp97yxu5pdj23evwg2f7vhfwqfr8k3t0ujr4majpy9uxqdk3spqq4zt'))
+            print(json.dumps(await rpc.get_transaction(txid='315a109d4a0e801ee831d360e6445db4f1ab87b4c355713fc39ddf107309b029', verbose=True),indent=4))
+            print(await rpc.get_merkel(txid='e67a0550848b7932d7796aeea16ab0e48a5cfe81c4e8cca2c5b03e0416850114', height=111194))
+            # print(await rpc.get_tsc_merkle(txid='6a9611ab2996acc61f9b0491ea1f57834ec244c3c5f7595728c06048aa937554',
+            #                    height=758152, txid_or_tx="txid", target_type="block_hash"))
+            print(await rpc.id_from_pos(height=758152, tx_pos=2, merkle=True))
+            print(await rpc.get_fee_histogram())
+            print(await rpc.server_banner())
+            print(await rpc.server_donation())
+            print(await rpc.server_features())
+            print(await rpc.server_peers_subscribe())
+            print(await rpc.server_ping())
+            print(await rpc.server_version(client_name="ElectrumX", protocol_version=["1.2", "1.8"]))
+
+        except RPCError as e:
+            logging.error(f"RPC Error: {e}")
 
 
 if __name__ == "__main__":
-
     asyncio.run(main=main())
     
 
