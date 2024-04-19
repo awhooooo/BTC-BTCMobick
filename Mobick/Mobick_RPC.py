@@ -168,7 +168,8 @@ class MobickRPCsocket:
     async def get_merkel(self, txid: str, height: int) -> Dict:
 
         return await self.send_request(method=methods[10], params=[txid, height])
-    
+
+    @DeprecationWarning
     async def get_tsc_merkle(self, txid: str, height: int, txid_or_tx: str="txid", target_type: str="block_hash"):
         # "not supported in ElectrumX version 1.16.0"
         if txid_or_tx not in ["txid", "tx"]:
