@@ -22,6 +22,7 @@ pub4 = priv4.get_public_key()
 pub5 = priv5.get_public_key()
 
 
+# Homer Simpson inscription commit transaction
 async def main1():
 
     rpc = MobickRPCsocket(host="13.55.48.220", port=40008)
@@ -58,6 +59,7 @@ async def main1():
     rpc.disconnect()
 
 
+# Homer Simpson inscription reveal transaction
 async def main2():
 
     rpc = MobickRPCsocket(host="13.55.48.220", port=40008)
@@ -97,6 +99,7 @@ async def main2():
     rpc.disconnect()
 
 
+# Homer Simpson image download from raw transaction hexadecimal data
 async def main3():
 
     rpc = MobickRPCsocket(host="13.55.48.220", port=40008)
@@ -132,6 +135,7 @@ async def main3():
     rpc.disconnect()
 
 
+# BTCMobick Whitepaper inscription commit transaction
 async def main4():
 
     rpc = MobickRPCsocket(host="13.55.48.220", port=40008)
@@ -169,6 +173,7 @@ async def main4():
     rpc.disconnect()
 
 
+#BTCMobick Whitepaper inscription reveal transaction
 async def main5():
 
     rpc = MobickRPCsocket(host="13.55.48.220", port=40008)
@@ -208,6 +213,7 @@ async def main5():
     rpc.disconnect()
 
 
+# BTCMobick Whitepaper download from raw transaction hexadecimal data
 async def main6():
 
     rpc = MobickRPCsocket(host="13.55.48.220", port=40008)
