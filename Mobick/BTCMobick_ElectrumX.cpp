@@ -106,7 +106,7 @@ namespace ELECTRUMX
         }
     }
 
-   nlohmann::json ElectrumX::send_requests_receive(const std::string& method, const std::vector<std::variant<std::string, uint64_t>>& params) 
+   nlohmann::json ElectrumX::send_requests_receive(const std::string& method, const std::vector<std::variant<std::string, uint64_t, bool> >& params) 
     {
         assert(this->is_connected == true);
 
@@ -259,7 +259,7 @@ namespace ELECTRUMX
 
     nlohmann::json ElectrumX::get_transaction(const std::string& txid, bool verbose)
     {
-        return ElectrumX::send_requests_receive(ElectrumX::methodName(ElectrumX::blockchain_transaction_get), {txid});
+        return ElectrumX::send_requests_receive(ElectrumX::methodName(ElectrumX::blockchain_transaction_get), {txid, verbose});
     }
 
     nlohmann::json ElectrumX::get_merkle(const std::string& txid, const uint64_t height)
@@ -274,7 +274,7 @@ namespace ELECTRUMX
 
     nlohmann::json ElectrumX::id_from_pos(const uint64_t height, const uint64_t tx_pos, bool merkle)
     {
-        return ElectrumX::send_requests_receive(ElectrumX::methodName(ElectrumX::blockchain_transaction_id_from_pos), {height, tx_pos});
+        return ElectrumX::send_requests_receive(ElectrumX::methodName(ElectrumX::blockchain_transaction_id_from_pos), {height, tx_pos, merkle});
     }
 
     nlohmann::json ElectrumX::get_fee_histogram()
