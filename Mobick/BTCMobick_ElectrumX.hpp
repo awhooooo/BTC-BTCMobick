@@ -49,7 +49,7 @@ namespace ELECTRUMX
 
             void connect();
             void disconnect();
-            nlohmann::json send_requests_receive(const std::string& method, const std::vector< std::variant<std::string, uint64_t> >& params);
+            nlohmann::json send_requests_receive(const std::string& method, const std::vector< std::variant<std::string, uint64_t, bool> >& params);
             std::string address_to_electrum_scripthash(const std::string& address);
 
             nlohmann::json block_header(const uint64_t height, const uint64_t cp_height = 0);
