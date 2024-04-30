@@ -73,6 +73,8 @@ namespace ELECTRUMX
             nlohmann::json server_ping();
             nlohmann::json server_version(std::string client_name = "", std::string protocol_version = "1.4");
 
+            static nlohmann::json deserialize_headers(const nlohmann::json& headers);
+
             enum methods
             {blockchain_block_header,
              blockchain_block_headers,
