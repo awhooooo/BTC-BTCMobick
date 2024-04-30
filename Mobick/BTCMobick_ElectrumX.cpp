@@ -312,6 +312,42 @@ namespace ELECTRUMX
         return ElectrumX::send_requests_receive(ElectrumX::methodName(ElectrumX::electrum_server_version), {client_name, protocol_version});
     }
 
+    nlohmann::json ElectrumX::deserialize_headers(const nlohmann::json& headers)
+    {
+        nlohmann::json serialized_headers;
+        std::string headers_string;
+        int count = 1;
+
+        if (headers.contains("hex")) {
+            headers_string = headers.at("hex").get<std::string>();
+            count = headers.at("count").get<int>();
+        }
+        else {
+            headers_string = headers.get<std::string>();
+        }
+
+        assert(headers_string.length() % 160 == 0);
+        assert(headers_string.length() / 160 == count);
+
+        libbitcoin::data_chunk data;
+        libbitcoin::decode_base16(data, headers_string);
+        std::reverse(data.begin(), data.end());
+        std::string headers_string_big = libbitcoin::encode_base16(data);
+
+        for (int i = count; i > 0; i--) {
+            nlohmann::json j;
+            int baseIndex = 160 * (i - 1);
+            j["version"] = headers_string_big.substr(baseIndex + 152, 8);
+            j["prevhash"] = headers_string_big.substr(baseIndex + 88, 64);
+            j["merkle_root"] = headers_string_big.substr(baseIndex + 24, 64);
+            j["timestamp"] = headers_string_big.substr(baseIndex + 16, 8);
+            j["bits"] = headers_string_big.substr(baseIndex + 8, 8);
+            j["nonce"] = headers_string_big.substr(baseIndex, 8);
+            serialized_headers.push_back(j);
+        }
+        return serialized_headers;
+    }
+
     const std::string& ElectrumX::methodName(const ElectrumX::methods method)
     {
         static const std::string names[] = {
