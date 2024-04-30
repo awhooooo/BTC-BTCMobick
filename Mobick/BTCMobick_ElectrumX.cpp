@@ -210,12 +210,14 @@ namespace ELECTRUMX
 
     nlohmann::json ElectrumX::block_header(const uint64_t height, const uint64_t cp_height)
     {
-        return ElectrumX::send_requests_receive(ElectrumX::methodName(ElectrumX::blockchain_block_header), {height, cp_height});
+        nlohmann::json result = ElectrumX::send_requests_receive(ElectrumX::methodName(ElectrumX::blockchain_block_header), {height, cp_height});
+        return ElectrumX::deserialize_headers(result);
     }
 
     nlohmann::json ElectrumX::block_headers(const uint64_t start_height, const uint64_t count, const uint64_t cp_height)
     {
-        return ElectrumX::send_requests_receive(ElectrumX::methodName(ElectrumX::blockchain_block_headers), {start_height, count, cp_height});
+        nlohmann::json result = ElectrumX::send_requests_receive(ElectrumX::methodName(ElectrumX::blockchain_block_headers), {start_height, count, cp_height});
+        return ElectrumX::deserialize_headers(result);
     }
 
     nlohmann::json ElectrumX::estimate_fee(const uint64_t number)
