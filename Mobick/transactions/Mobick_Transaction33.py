@@ -260,6 +260,7 @@ async def main6():
         file.write(data)
         file.close()
 
+
 async def main7():
 
     rpc = MobickRPCsocket(host="220.85.71.15", port=40008)
