@@ -307,14 +307,15 @@ async def main7():
             #                      TB_ABCDE
             #                     /       \
             #                    /         \
-            #                   /          TL_CDE
+            #                   /          TB_CDE
             #                  /           /  \
             #                 /           /    \
-            #              TB_AB         /    TL_DE
+            #              TB_AB         /    TB_DE
             #               / \         /      / \
             #              /   \       /      /   \
             #            TL_A TL_B   TL_C   TL_D TL_E
 
+            # internal key is different with signing key, control block has control version, internal key and merkle proof of the spending script
             control_block7_1 = ControlBlock(pubkey=pub1, script_to_spend=tr_script_p2pk4, scripts=leaf5 + leaf3 + branch_ab, is_odd=address4.is_odd())
             tx7.witnesses.append(TxWitnessInput([sig7_1, tr_script_p2pk4.to_hex(), control_block7_1.to_hex()]))
             print("\nRaw signed transaction:\n" + tx7.serialize())
