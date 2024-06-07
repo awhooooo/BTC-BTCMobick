@@ -260,6 +260,68 @@ async def main6():
         file.write(data)
         file.close()
 
+async def main7():
+
+    rpc = MobickRPCsocket(host="220.85.71.15", port=40008)
+    async with rpc.manage_connection():
+        try:
+            tr_script_p2pk1 = Script([pub1.to_x_only_hex(), "OP_CHECKSIG"])
+            tr_script_p2pk2 = Script([pub2.to_x_only_hex(), "OP_CHECKSIG"])
+            tr_script_p2pk3 = Script([pub3.to_x_only_hex(), "OP_CHECKSIG"])
+            tr_script_p2pk4 = Script([pub4.to_x_only_hex(), "OP_CHECKSIG"])
+            tr_script_p2pk5 = Script([pub5.to_x_only_hex(), "OP_CHECKSIG"])
+            all_leafs = [[tr_script_p2pk1, tr_script_p2pk2], [tr_script_p2pk3, [tr_script_p2pk4, tr_script_p2pk5]]]
+
+            address4 = pub1.get_taproot_address(all_leafs)
+            address5 = P2pkhAddress("16vnUfDxdMWYKYpw4gCqkwCHRy7jtzgJgn")
+            print(address4.to_string())
+
+            utxos = await rpc.list_unspent("bc1psly7fjsww8mtmgwwr2rllujscwlfrzznqp4239cxvl5t22fjndrq5pwe93")
+            ins7 = TxInput(txid=utxos[0]['tx_hash'], txout_index=utxos[0]['tx_pos'])
+            outs7 = TxOutput(amount=utxos[0]['value']-1000, script_pubkey=address5.to_script_pub_key())
+            tx7 = Transaction(inputs=[ins7], outputs=[outs7], has_segwit=True)
+
+            sig7_1 = priv4.sign_taproot_input(tx=tx7, txin_index=0, utxo_scripts=[address4.to_script_pub_key()],
+                                              amounts=[utxos[0]['value']], script_path=True, 
+                                              tapleaf_script=tr_script_p2pk4, tweak=False)
+            
+            # If using get_tag_hashed_merkle_root
+            merkleroot1 = get_tag_hashed_merkle_root(scripts=all_leafs)
+            
+            # If manually constructing the tree
+            leaf1 = tapleaf_tagged_hash(tr_script_p2pk1)
+            leaf2 = tapleaf_tagged_hash(tr_script_p2pk2)
+            leaf3 = tapleaf_tagged_hash(tr_script_p2pk3)
+            leaf4 = tapleaf_tagged_hash(tr_script_p2pk4)
+            leaf5 = tapleaf_tagged_hash(tr_script_p2pk5)
+
+            branch_ab = tapbranch_tagged_hash(leaf1, leaf2)
+            branch_de = tapbranch_tagged_hash(leaf4, leaf5)
+            branch_cde = tapbranch_tagged_hash(leaf3, branch_de)
+            merkleroot2 = tapbranch_tagged_hash(branch_ab, branch_cde)
+            assert(merkleroot1 == merkleroot2)
+
+            # tapleaves and tapbranches in order
+
+            #                      TB_ABCDE
+            #                     /       \
+            #                    /         \
+            #                   /          TL_CDE
+            #                  /           /  \
+            #                 /           /    \
+            #              TB_AB         /    TL_DE
+            #               / \         /      / \
+            #              /   \       /      /   \
+            #            TL_A TL_B   TL_C   TL_D TL_E
+
+            control_block7_1 = ControlBlock(pubkey=pub1, script_to_spend=tr_script_p2pk4, scripts=leaf5 + leaf3 + branch_ab, is_odd=address4.is_odd())
+            tx7.witnesses.append(TxWitnessInput([sig7_1, tr_script_p2pk4.to_hex(), control_block7_1.to_hex()]))
+            print("\nRaw signed transaction:\n" + tx7.serialize())
+            print(await rpc.broadcast_transaction(tx_hexstring=tx7.serialize()))
+
+        except RPCError as e:
+            logging.error(f"RPC Error: {e}")
+
 
 if __name__ == "__main__":
 
@@ -268,4 +330,5 @@ if __name__ == "__main__":
     # asyncio.run(main=main3())
     # asyncio.run(main=main4())
     # asyncio.run(main=main5())
-    asyncio.run(main=main6())
+    # asyncio.run(main=main6())
+    asyncio.run(main=main7())
